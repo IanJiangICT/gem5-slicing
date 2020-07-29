@@ -8,15 +8,28 @@ ARCH=RISCV
 GEM5_BIN=$GEM5_DIR/build/$ARCH/gem5.$GEM5_MODE
 SIMPOINT_BIN=$SIMPOINT_DIR/bin/simpoint
 
-WORK_DIR=`pwd`
-
-APP=hello
 SIMPOINT_INTERVAL=1000
 
+WORK_DIR=`pwd`
+
+function usage
+{
+	echo "Usage:"
+	echo "  $0 application"
+	exit 0
+}
+
+if [ $# -gt 0 ]; then
+	APP=$1
+else
+	usage
+fi
+
+if [ $1 == "--help" ]; then
+	usage
+fi
+
 APP_DIR=$WORK_DIR/slicing/$APP
-APP_CMD=$APP_DIR/$APP
-APP_OPTION=`cat $APP_DIR/cmd`
-APP_FULL_CMD="-c $APP_CMD -o $APP_OPTION"
 
 if [ ! -f $GEM5_BIN ]; then
 	echo "Error: $GEM5_BIN not found"
@@ -38,6 +51,10 @@ if [ $? -eq 0 ]; then
 	echo "Error: Checkpoint directory not clear: $APP_DIR/m5out/cpt.*"
 	exit 1
 fi
+
+APP_CMD=$APP_DIR/$APP
+APP_OPTION=`cat $APP_DIR/cmd`
+APP_FULL_CMD="-c $APP_CMD -o $APP_OPTION"
 
 echo "------------------------"
 echo "Gem5     = " $GEM5_BIN
