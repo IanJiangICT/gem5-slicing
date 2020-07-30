@@ -65,6 +65,9 @@ echo "SimPoint = " $SIMPOINT_BIN
 echo "App      = " $APP_DIR
 echo "------------------------"
 
+log_file=$APP_DIR/make-checkpoints-$APP.log
+> $log_file
+
 echo "------------------------"
 echo "Generate bbv"
 echo "------------------------"
@@ -73,7 +76,12 @@ $GEM5_BIN --outdir=$APP_DIR/m5out \
 		$APP_FULL_CMD \
 		--cpu-type=NonCachingSimpleCPU \
 		--at-instruction \
-		--simpoint-profile --simpoint-interval $SIMPOINT_INTERVAL
+		--simpoint-profile --simpoint-interval $SIMPOINT_INTERVAL \
+		>> $log_file 2>&1
+if [ ! $? -eq 0 ]; then
+	echo "Error: Failed to generate bbv. Details see $log_file"
+	exit 1
+fi
 
 echo "------------------------"
 echo "Run simpoint"
@@ -81,7 +89,12 @@ echo "------------------------"
 $SIMPOINT_BIN -loadFVFile $APP_DIR/m5out/simpoint.bb.gz \
 		-inputVectorsGzipped -maxK 30 \
 		-saveSimpoints $APP_DIR/m5out/$ARCH.simpts \
-		-saveSimpointWeights $APP_DIR/m5out/$ARCH.weights
+		-saveSimpointWeights $APP_DIR/m5out/$ARCH.weights \
+		>> $log_file 2>&1
+if [ ! $? -eq 0 ]; then
+	echo "Error: Failed to run simpoint. Details see $log_file"
+	exit 1
+fi
 
 echo "------------------------"
 echo "Make checkpoints"
@@ -91,12 +104,16 @@ $GEM5_BIN --outdir=$APP_DIR/m5out \
 		$APP_FULL_CMD \
 		--cpu-type=NonCachingSimpleCPU \
 		--at-instruction \
-		--take-simpoint-checkpoint=$APP_DIR/m5out/RISCV.simpts,$APP_DIR/m5out/RISCV.weights,$SIMPOINT_INTERVAL,0
+		--take-simpoint-checkpoint=$APP_DIR/m5out/RISCV.simpts,$APP_DIR/m5out/RISCV.weights,$SIMPOINT_INTERVAL,0 \
+		>> $log_file 2>&1
+if [ ! $? -eq 0 ]; then
+	echo "Error: Failed to make checkpoints. Details see $log_file"
+	exit 1
+fi
 
 echo "------------------------"
 echo "List resulting checkpoints"
 echo "------------------------"
-echo "(under $APP_DIR/m5out)"
-ls -l $APP_DIR/m5out/
+ls -ld $APP_DIR/m5out/cpt.*
 
 exit 0
