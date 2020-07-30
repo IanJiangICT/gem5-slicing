@@ -1,10 +1,12 @@
 #!/bin/bash
 
-GEM5_DIR=../gem5-dev
-SIMPOINT_DIR=../Simpoint3.2
+scripts_path=$(cd "$(dirname $0)"; pwd)
+source $scripts_path/config.sh
 
-GEM5_MODE=debug
-ARCH=RISCV
+if [ -z $GEM5_DIR ]; then
+	GEM5_DIR=../gem5
+fi
+
 GEM5_BIN=$GEM5_DIR/build/$ARCH/gem5.$GEM5_MODE
 
 WORK_DIR=`pwd`
