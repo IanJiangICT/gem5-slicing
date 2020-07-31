@@ -88,8 +88,22 @@ for i in $(seq 1 $CHECKPOINT_CNT); do
 		continue
 	fi
 
-	echo "Result slice for checkpoint $i"
-	ls -lt $APP_DIR/m5out/cpt.*/simpoint_slice.S | head -n 1
+	echo "Result slice"
+	slice_file=`ls -t $APP_DIR/m5out/cpt.*/simpoint_slice.S | head -n 1`
+	$scripts_path/slice-fix.py $slice_file > $slice_file.S
+	ls -l $slice_file $slice_file.S
+
+	CC=$GNU_PREFIX-gcc
+	which $CC
+	if [ $? -eq 0 ]; then
+		echo "Compile slice as checking"
+		$CC -c $slice_file.S -o /dev/null -DSIMPOINT_INIT
+		if [ $? -eq 0 ]; then
+			echo "Compile slice as checking OK"
+		else
+			echo "Compile slice as checking Failed"
+		fi
+	fi
 done
 
 exit 0
