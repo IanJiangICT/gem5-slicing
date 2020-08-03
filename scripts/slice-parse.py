@@ -267,8 +267,75 @@ class SliceParse:
 			print(l)
 
 	def output(self, output_fd):
-		print("TODO SliceParse::output()")
+		print("Output resulting slice")
 
+		out_str = \
+"""\
+/*
+ * Gem5 Slice
+ */
+"""
+		output_fd.write(out_str)
+
+		out_str = \
+"""
+.global simpoint_entry
+.section .text
+.balign 4
+simpoint_entry:
+"""
+		output_fd.write(out_str)
+
+		out_str = \
+"""
+/* Restore normal memory */
+"""
+		output_fd.write(out_str)
+		for i in range(0, len(self.slice_data_update.mem_init_addr)):
+			out_str = "li t0, " + hex(self.slice_data_update.mem_init_addr[i]) + "\n"
+			out_str += "li t1, " + hex(self.slice_data_update.mem_init_data[i]) + "\n"
+			out_str += "sd t1, 0(t0)\n"
+			output_fd.write(out_str)
+
+		out_str = \
+"""
+/* Restore stack */
+"""
+		output_fd.write(out_str)
+		out_str = "li t0, " + hex(self.slice_data_update.stack_sp_top) + "\n"
+		output_fd.write(out_str)
+		for i in range(0, len(self.slice_data_update.stack_data)):
+			out_str = "li t1, " + hex(self.slice_data_update.stack_data[i]) + "\n"
+			out_str += "sd t1, " + str(i * 8) + "(t0)\n"
+			output_fd.write(out_str)
+
+		out_str = \
+"""
+/* Restore register - float */
+"""
+		output_fd.write(out_str)
+
+		out_str = \
+"""
+/* Restore register - integer */
+"""
+		output_fd.write(out_str)
+		for i in range(0, len(self.slice_data_update.reg_int)):
+			if (i == 0): # Register x0 (i.e. register zero) is skipped
+				continue
+			out_str = "li x" + str(i) + ", " + hex(self.slice_data_update.reg_int[i]) + "\n"
+			output_fd.write(out_str)
+
+		text_line_begin = 0
+		text_line_end = 0
+		for i in range(0, len(self.slice_text)):
+			if ("#ifdef SIMPOINT_START" == self.slice_text[i]):
+				text_line_begin = i
+			if ("#ifdef SIMPOINT_EXIT" == self.slice_text[i]):
+				text_line_end = i - 1
+		for i in range(text_line_begin, text_line_end):
+			out_str = self.slice_text[i] + "\n"
+			output_fd.write(out_str)
 
 def usage():
 		print("Usage:");
