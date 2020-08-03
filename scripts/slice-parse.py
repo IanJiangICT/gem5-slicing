@@ -25,6 +25,9 @@ class SliceData:
 			print("reg_int " + str(i) + " " + hex(self.reg_int[i]))
 		for i in range(0, len(self.reg_float)):
 			print("reg_float " + str(i) + " " + hex(self.reg_float[i]))
+		print("stack_base " + hex(self.stack_base))
+		print("stack_sp_top " + hex(self.stack_sp_top))
+		print("stack_sp_bottom " + hex(self.stack_sp_bottom))
 		for i in range(0, len(self.stack_data)):
 			print("stack_data " + str(i) + " " + hex(self.stack_data[i]))
 		for i in range(0, len(self.vma_list_name)):
@@ -191,6 +194,17 @@ class SliceParse:
 				self.parse_text_line(slice_line)
 				continue
 
+	def addr_check_update(self, addr):
+		new_addr = addr
+		for i in range(0, len(self.slice_data.vma_list_name)):
+			if (addr < self.slice_data.vma_list_start[i] or addr >= self.slice_data.vma_list_end[i]):
+				continue
+			relocate_offset = self.slice_data.vma_list_start[i] - self.slice_data_update.vma_list_start[i]
+			if (relocate_offset != 0):
+				new_addr -= relocate_offset
+				break
+		return new_addr
+
 	def reconstruct(self):
 		# Make a copy of slice data to make update
 		self.slice_data_update = copy.deepcopy(self.slice_data)
@@ -224,7 +238,6 @@ class SliceParse:
 
 		# Relocate VMA
 		mem_free_start = self.RELOCATE_STACK_BASE
-		print(vma_relocate_list)
 		for i in vma_relocate_list:
 			vma_size = self.slice_data.vma_list_end[i] - self.slice_data.vma_list_start[i]
 			self.slice_data_update.vma_list_end[i] = mem_free_start
@@ -232,6 +245,19 @@ class SliceParse:
 			self.slice_data_update.vma_list_start[i] = mem_free_start
 
 		# Update stack and memory information
+		for i in range(0, len(self.slice_data_update.stack_data)):
+			self.slice_data_update.stack_data[i] = self.addr_check_update(self.slice_data_update.stack_data[i])
+		process_list = []
+		process_list.append(self.slice_data_update.stack_data)
+		process_list.append(self.slice_data_update.mem_init_addr)
+		process_list.append(self.slice_data_update.mem_init_data)
+		process_list.append(self.slice_data_update.reg_int)
+		for l in process_list:
+			for i in range(0, len(l)):
+				l[i] = self.addr_check_update(l[i])
+		self.slice_data_update.stack_base = self.addr_check_update(self.slice_data_update.stack_base)
+		self.slice_data_update.stack_sp_top = self.addr_check_update(self.slice_data_update.stack_sp_top)
+		self.slice_data_update.stack_sp_bottom = self.addr_check_update(self.slice_data_update.stack_sp_bottom)
 
 		print("== Slice Data Original ==")
 		self.slice_data.printOut()
