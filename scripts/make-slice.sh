@@ -90,11 +90,12 @@ for i in $(seq 1 $CHECKPOINT_CNT); do
 
 	echo "Result slice"
 	slice_file=`ls -t $APP_DIR/m5out/cpt.*/simpoint_slice.S | head -n 1`
-	$scripts_path/slice-fix.py $slice_file > $slice_file.S
-	ls -l $slice_file $slice_file.S
+	log_file=$APP_DIR/slice-parse-$APP-$i.log
+	$scripts_path/slice-parse.py $slice_file > $log_file
+	ls -l $slice_file*
 
 	CC=$GNU_PREFIX-gcc
-	which $CC
+	which $CC > /dev/null
 	if [ $? -eq 0 ]; then
 		echo "Compile slice as checking"
 		$CC -c $slice_file.S -o /dev/null -DSIMPOINT_INIT
