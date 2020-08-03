@@ -266,7 +266,7 @@ class SliceParse:
 		for l in self.slice_text:
 			print(l)
 
-	def output(self):
+	def output(self, output_fd):
 		print("TODO SliceParse::output()")
 
 
@@ -287,11 +287,19 @@ def main():
 		print("Failed to open slice file", slice_file)
 		sys.exit(2)
 	
+	output_file = sys.argv[1] + ".S"
+	print("Open output file", output_file)
+	try:
+		output_fd = open(output_file, 'w')
+	except IOError:
+		print("Failed to open output file", output_file)
+		sys.exit(2)
+	
 	print("Start process")
 	parser = SliceParse(slice_fd)
 	parser.parse()
 	parser.reconstruct()
-	parser.output()
+	parser.output(output_fd)
 
 if __name__== "__main__":
 	main()
