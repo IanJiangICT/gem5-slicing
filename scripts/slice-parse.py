@@ -42,6 +42,9 @@ class SliceParse:
 	FLAG_START_VMA_LIST = "/* VMA list */"
 	FLAG_START_MEM_INIT = "/* Address-Value pairs */"
 
+	RELOCATE_STACK_BASE = 0x80000000
+	RELOCATE_CHECK_MASK = 0xFFFFFFFFFFFFFFFF ^ (RELOCATE_STACK_BASE - 1)
+
 	def __init__(self, slice_fd):
 		self.slice_fd = slice_fd
 		self.slice_data = SliceData()
@@ -191,7 +194,43 @@ class SliceParse:
 	def reconstruct(self):
 		# Make a copy of slice data to make update
 		self.slice_data_update = copy.deepcopy(self.slice_data)
-		# Build new VMA list
+
+		# Build a list of VMA index that need relocate
+		vma_cnt = len(self.slice_data.vma_list_name)
+		vma_relocate_list = []
+		for i in range(0, vma_cnt): 	# First, arrange stack
+			if (i in vma_relocate_list):
+				continue
+			if (self.slice_data.vma_list_name[i] != "stack"):
+				continue
+			if (not (self.slice_data.vma_list_start[i] & self.RELOCATE_CHECK_MASK)):
+				print("WARN: VMA of stack type valid? " + hex(self.slice_data.vma_list_start[i]) + "-" + hex(self.slice_data.vma_list_end[i]))
+				continue
+			if (not (self.slice_data.vma_list_end[i] & self.RELOCATE_CHECK_MASK)):
+				print("WARN: VMA of stack type valid? " + hex(self.slice_data.vma_list_start[i]) + "-" + hex(self.slice_data.vma_list_end[i]))
+				continue
+			vma_relocate_list.append(i)
+		for i in range(0, vma_cnt): 	# Then, others
+			if (i in vma_relocate_list):
+				continue
+			if (not (self.slice_data.vma_list_start[i] & self.RELOCATE_CHECK_MASK) and \
+				not (self.slice_data.vma_list_end[i] & self.RELOCATE_CHECK_MASK)):
+				continue
+			if (not (self.slice_data.vma_list_start[i] & self.RELOCATE_CHECK_MASK) or \
+				not (self.slice_data.vma_list_end[i] & self.RELOCATE_CHECK_MASK)):
+				print("WARN: VMA of head type valid? " + hex(self.slice_data.vma_list_start[i]) + "-" + hex(self.slice_data.vma_list_end[i]))
+				continue
+			vma_relocate_list.append(i)
+
+		# Relocate VMA
+		mem_free_start = self.RELOCATE_STACK_BASE
+		print(vma_relocate_list)
+		for i in vma_relocate_list:
+			vma_size = self.slice_data.vma_list_end[i] - self.slice_data.vma_list_start[i]
+			self.slice_data_update.vma_list_end[i] = mem_free_start
+			mem_free_start -= vma_size
+			self.slice_data_update.vma_list_start[i] = mem_free_start
+
 		# Update stack and memory information
 
 		print("== Slice Data Original ==")
