@@ -105,6 +105,10 @@ for i in $(seq 1 $CHECKPOINT_CNT); do
 			echo "Compile slice as checking Failed"
 		fi
 	fi
+
+	log_file=$APP_DIR/slice-build-$APP-$i.log
+	$scripts_path/slice-build.sh $slice_file.S > $log_file
+	ls -l $slice_file*elf*
 done
 
 exit 0
