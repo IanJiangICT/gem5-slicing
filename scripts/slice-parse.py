@@ -39,11 +39,13 @@ class SliceData:
 class SliceParse:
 	'''Parse a slice output by Gem5 and give target source codes'''
 
-	FLAG_START_REG_INT= "simpoint_gen_reg_int:"
-	FLAG_START_REG_FLOAT = "simpoint_gen_reg_float:"
+	FLAG_START_REG_INT= "simpoint_reg_int:"
+	FLAG_START_REG_FLOAT = "simpoint_reg_float:"
 	FLAG_START_STACK_DATA = "simpoint_stack_top:"
 	FLAG_START_VMA_LIST = "/* VMA list */"
 	FLAG_START_MEM_INIT = "/* Address-Value pairs */"
+	FLAG_START_TEXT = "/* SimPoint Start */"
+	FLAG_STOP_TEXT = "/* SimPoint Exit */"
 
 	RELOCATE_STACK_BASE = 0x80000000
 	RELOCATE_CHECK_MASK = 0xFFFFFFFFFFFFFFFF ^ (RELOCATE_STACK_BASE - 1)
@@ -325,14 +327,24 @@ simpoint_entry:
 				continue
 			out_str = "li x" + str(i) + ", " + hex(self.slice_data_update.reg_int[i]) + "\n"
 			output_fd.write(out_str)
+		out_str = "\n"
+		output_fd.write(out_str)
 
+		out_str = \
+"""
+/* Jump to start of slice */
+j simpoint_start
+
+/* Full text of slice */
+"""
+		output_fd.write(out_str)
 		text_line_begin = 0
 		text_line_end = 0
 		for i in range(0, len(self.slice_text)):
-			if ("#ifdef SIMPOINT_START" == self.slice_text[i]):
+			if (self.FLAG_START_TEXT == self.slice_text[i]):
 				text_line_begin = i
-			if ("#ifdef SIMPOINT_EXIT" == self.slice_text[i]):
-				text_line_end = i - 1
+			if (self.FLAG_STOP_TEXT == self.slice_text[i]):
+				text_line_end = i
 		for i in range(text_line_begin, text_line_end):
 			out_str = self.slice_text[i] + "\n"
 			output_fd.write(out_str)
