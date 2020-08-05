@@ -307,6 +307,26 @@ class SliceParse:
 
 		out_str = \
 """
+/* VMA list */
+/*
+"""
+		output_fd.write(out_str)
+		for i in range(0, len(self.slice_data_update.vma_list_name)):
+			out_str = "VMA " + str(i)
+			out_str += " " + self.slice_data_update.vma_list_name[i]
+			out_str += " " + hex(self.slice_data_update.vma_list_start[i])
+			out_str += " " + hex(self.slice_data_update.vma_list_end[i])
+			out_str += " " + hex(self.slice_data_update.vma_list_end[i] - self.slice_data_update.vma_list_start[i])
+			out_str += "\n"
+			output_fd.write(out_str)
+		out_str = \
+"""\
+ */
+"""
+		output_fd.write(out_str)
+
+		out_str = \
+"""
 .global simpoint_entry
 .section .text
 .balign 4
