@@ -32,7 +32,8 @@ class SliceData:
 			print("stack_data " + str(i) + " " + hex(self.stack_data[i]))
 		for i in range(0, len(self.vma_list_name)):
 			print("vma " + str(i) + " " + self.vma_list_name[i] + " " \
-					+ hex(self.vma_list_start[i]) + " " + hex(self.vma_list_end[i]))
+					+ hex(self.vma_list_start[i]) + " " + hex(self.vma_list_end[i]) \
+					+ " " + hex(self.vma_list_end[i] - self.vma_list_start[i]))
 		for i in range(0, len(self.mem_init_addr)):
 			print("mem " + str(i) + " " + hex(self.mem_init_addr[i]) + " " + hex(self.mem_init_data[i]))
 
@@ -49,6 +50,9 @@ class SliceParse:
 
 	RELOCATE_STACK_BASE = 0x80000000
 	RELOCATE_CHECK_MASK = 0xFFFFFFFFFFFFFFFF ^ (RELOCATE_STACK_BASE - 1)
+
+	VMA_ALIGN = 0x1000
+	VMA_MASK_BASE = 0xFFFFFFFFFFFFFFFF ^ (VMA_ALIGN - 1)
 
 	def __init__(self, slice_fd):
 		self.slice_fd = slice_fd
@@ -129,10 +133,31 @@ class SliceParse:
 				break
 			if (len(line_words[5]) < 3): # Min. VMA name is "[?]"
 				break
-			self.slice_data.vma_list_start.append(int("0x" + sub_words[0], 16))
-			self.slice_data.vma_list_end.append(int("0x" + sub_words[1], 16))
-			self.slice_data.vma_list_name.append(line_words[5][1:-1])
+			vma_start = int("0x" + sub_words[0], 16)
+			vma_end = int("0x" + sub_words[1], 16)
+			vma_name = line_words[5][1:-1]
+			self.append_new_vma(vma_start, vma_end, vma_name)
 	
+	def append_new_vma(self, start, end, name):
+		self.slice_data.vma_list_start.append(start)
+		self.slice_data.vma_list_end.append(end)
+		self.slice_data.vma_list_name.append(name)
+
+	def find_addr_in_vma(self, addr):
+		for i in range(0, len(self.slice_data.vma_list_name)):
+			if (addr >= self.slice_data.vma_list_start[i] and addr < self.slice_data.vma_list_end[i]):
+				return True
+		return False
+
+	def add_vma(self):
+		for addr in self.slice_data.mem_init_addr:
+			if (self.find_addr_in_vma(addr)):
+				continue
+			vma_start = addr & self.VMA_MASK_BASE
+			vma_end = vma_start + self.VMA_ALIGN
+			vma_name = "added"
+			self.append_new_vma(vma_start, vma_end, vma_name)
+
 	def parse_mem_init(self):
 		slice_fd = self.slice_fd
 		while (True):
@@ -208,6 +233,7 @@ class SliceParse:
 		return new_addr
 
 	def reconstruct(self):
+		self.add_vma()
 		# Make a copy of slice data to make update
 		self.slice_data_update = copy.deepcopy(self.slice_data)
 
