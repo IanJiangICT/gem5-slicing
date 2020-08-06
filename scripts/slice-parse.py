@@ -48,8 +48,7 @@ class SliceParse:
 	FLAG_START_TEXT = "/* SimPoint Start */"
 	FLAG_STOP_TEXT = "/* SimPoint Exit */"
 
-	RELOCATE_STACK_BASE = 0x80000000
-	RELOCATE_CHECK_MASK = 0xFFFFFFFFFFFFFFFF ^ (RELOCATE_STACK_BASE - 1)
+	RELOCATE_CHECK_MASK = 0xFFFFFFFF00000000
 
 	VMA_ALIGN = 0x1000
 	VMA_MASK_BASE = 0xFFFFFFFFFFFFFFFF ^ (VMA_ALIGN - 1)
@@ -265,12 +264,17 @@ class SliceParse:
 			vma_relocate_list.append(i)
 
 		# Relocate VMA
-		mem_free_start = self.RELOCATE_STACK_BASE
+		# Note: Use 0 start address of free memroy here in internal recording, 
+		# while add " + FREE_MEM_BASE" as an offset in ouputing slice.
+		mem_free_start = 0
 		for i in vma_relocate_list:
-			vma_size = self.slice_data.vma_list_end[i] - self.slice_data.vma_list_start[i]
-			self.slice_data_update.vma_list_end[i] = mem_free_start
-			mem_free_start -= vma_size
+			if (self.slice_data.vma_list_name[i] == "stack"):
+				vma_size = self.slice_data.stack_max_size
+			else:
+				vma_size = self.slice_data.vma_list_end[i] - self.slice_data.vma_list_start[i]
 			self.slice_data_update.vma_list_start[i] = mem_free_start
+			mem_free_start += vma_size
+			self.slice_data_update.vma_list_end[i] = mem_free_start
 
 		# Update stack and memory information
 		for i in range(0, len(self.slice_data_update.stack_data)):
@@ -302,6 +306,10 @@ class SliceParse:
 /*
  * Gem5 Slice
  */
+
+#ifndef FREE_MEM_BASE
+#define FREE_MEM_BASE 0x40000000
+#endif
 """
 		output_fd.write(out_str)
 
@@ -340,8 +348,14 @@ simpoint_entry:
 """
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.mem_init_addr)):
-			out_str = "li t0, " + hex(self.slice_data_update.mem_init_addr[i]) + "\n"
-			out_str += "li t1, " + hex(self.slice_data_update.mem_init_data[i]) + "\n"
+			if (self.slice_data_update.mem_init_addr[i] != self.slice_data.mem_init_addr[i]):
+				out_str = "li t0, " + hex(self.slice_data_update.mem_init_addr[i]) + " + FREE_MEM_BASE\n"
+			else:
+				out_str = "li t0, " + hex(self.slice_data.mem_init_addr[i]) + "\n"
+			if (self.slice_data_update.mem_init_data[i] != self.slice_data.mem_init_data[i]):
+				out_str += "li t1, " + hex(self.slice_data_update.mem_init_data[i]) + " + FREE_MEM_BASE\n"
+			else:
+				out_str += "li t1, " + hex(self.slice_data.mem_init_data[i]) + "\n"
 			out_str += "sd t1, 0(t0)\n"
 			output_fd.write(out_str)
 
@@ -350,10 +364,13 @@ simpoint_entry:
 /* Restore stack */
 """
 		output_fd.write(out_str)
-		out_str = "li t0, " + hex(self.slice_data_update.stack_sp_top) + "\n"
+		out_str = "li t0, " + hex(self.slice_data_update.stack_sp_top) + " + FREE_MEM_BASE\n"
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.stack_data)):
-			out_str = "li t1, " + hex(self.slice_data_update.stack_data[i]) + "\n"
+			if (self.slice_data_update.stack_data[i] != self.slice_data.stack_data[i]):
+				out_str = "li t1, " + hex(self.slice_data_update.stack_data[i]) + " + FREE_MEM_BASE\n"
+			else:
+				out_str = "li t1, " + hex(self.slice_data.stack_data[i]) + "\n"
 			out_str += "sd t1, " + str(i * 8) + "(t0)\n"
 			output_fd.write(out_str)
 
@@ -371,7 +388,10 @@ simpoint_entry:
 		for i in range(0, len(self.slice_data_update.reg_int)):
 			if (i == 0): # Register x0 (i.e. register zero) is skipped
 				continue
-			out_str = "li x" + str(i) + ", " + hex(self.slice_data_update.reg_int[i]) + "\n"
+			if (self.slice_data_update.reg_int[i] != self.slice_data.reg_int[i]):
+				out_str = "li x" + str(i) + ", " + hex(self.slice_data_update.reg_int[i]) + " + FREE_MEM_BASE\n"
+			else:
+				out_str = "li x" + str(i) + ", " + hex(self.slice_data.reg_int[i]) + "\n"
 			output_fd.write(out_str)
 		out_str = "\n"
 		output_fd.write(out_str)

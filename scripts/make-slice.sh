@@ -98,7 +98,7 @@ for i in $(seq 1 $CHECKPOINT_CNT); do
 	which $CC > /dev/null
 	if [ $? -eq 0 ]; then
 		echo "Compile slice as checking"
-		$CC -c $slice_file.S -o /dev/null -DSIMPOINT_INIT
+		$CC -c $slice_file.S -o /dev/null
 		if [ $? -eq 0 ]; then
 			echo "Compile slice as checking OK"
 		else
