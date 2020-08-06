@@ -58,7 +58,6 @@ fi
 
 APP_CMD=$APP_DIR/$APP
 APP_OPTION=`cat $APP_DIR/cmd`
-APP_FULL_CMD="-c $APP_CMD -o $APP_OPTION"
 
 echo "------------------------"
 echo "Gem5     = " $GEM5_BIN
@@ -75,7 +74,7 @@ for i in $(seq 1 $CHECKPOINT_CNT); do
 	$GEM5_BIN --outdir=$APP_DIR/m5out \
 			--debug-flags=Exec \
 			$GEM5_DIR/configs/example/se.py \
-			$APP_FULL_CMD \
+			-c $APP_CMD -o "$APP_OPTION" \
 			--cpu-type=NonCachingSimpleCPU \
 			--at-instruction \
 			--enable-simpoint-slicing \

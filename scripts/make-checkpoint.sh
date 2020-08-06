@@ -57,7 +57,6 @@ fi
 
 APP_CMD=$APP_DIR/$APP
 APP_OPTION=`cat $APP_DIR/cmd`
-APP_FULL_CMD="-c $APP_CMD -o $APP_OPTION"
 
 echo "------------------------"
 echo "Gem5     = " $GEM5_BIN
@@ -73,7 +72,7 @@ echo "Generate bbv"
 echo "------------------------"
 $GEM5_BIN --outdir=$APP_DIR/m5out \
 		$GEM5_DIR/configs/example/se.py \
-		$APP_FULL_CMD \
+		-c $APP_CMD -o "$APP_OPTION" \
 		--cpu-type=NonCachingSimpleCPU \
 		--at-instruction \
 		--simpoint-profile --simpoint-interval $SIMPOINT_INTERVAL \
@@ -101,7 +100,7 @@ echo "Make checkpoints"
 echo "------------------------"
 $GEM5_BIN --outdir=$APP_DIR/m5out \
 		$GEM5_DIR/configs/example/se.py \
-		$APP_FULL_CMD \
+		-c $APP_CMD -o "$APP_OPTION" \
 		--cpu-type=NonCachingSimpleCPU \
 		--at-instruction \
 		--take-simpoint-checkpoint=$APP_DIR/m5out/RISCV.simpts,$APP_DIR/m5out/RISCV.weights,$SIMPOINT_INTERVAL,0 \
