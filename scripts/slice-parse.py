@@ -58,6 +58,9 @@ class SliceParse:
 		self.slice_data = SliceData()
 		self.slice_data_update = SliceData()
 		self.slice_text = []
+		self.slice_symbols_expected = set()
+		self.slice_symbols_exists = set()
+		self.slice_symbols_added = set()
 
 	def parse_reg_int(self):
 		slice_fd = self.slice_fd
@@ -180,11 +183,21 @@ class SliceParse:
 			output_line = slice_line
 		elif (':' in slice_line):
 			output_line = slice_line
+			line_words = slice_line.split(':')
+			if (len(line_words[0]) > 0):
+				self.slice_symbols_exists.add(line_words[0])
 		else:
 			mnemonic = slice_line.split(' ')[0]
 			underscore_cnt = mnemonic.count('_')
 			output_line = slice_line.replace('_', '.', underscore_cnt)
+			if (slice_line[0] == 'j' or slice_line[0] == 'b'):
+				line_words = slice_line.split(',')
+				if (len(line_words) >= 2):
+					self.slice_symbols_expected.add(line_words[-1].strip())
 		self.slice_text.append(output_line)
+
+	def add_symbol(self):
+		self.slice_symbols_added = self.slice_symbols_expected - self.slice_symbols_exists
 
 	def parse(self):
 		slice_fd = self.slice_fd
@@ -233,6 +246,7 @@ class SliceParse:
 
 	def reconstruct(self):
 		self.add_vma()
+		self.add_symbol()
 		# Make a copy of slice data to make update
 		self.slice_data_update = copy.deepcopy(self.slice_data)
 
@@ -295,8 +309,12 @@ class SliceParse:
 		self.slice_data.printOut()
 		print("== Slice Data Updated ==")
 		self.slice_data_update.printOut()
+		print("== Slice text ==")
 		for l in self.slice_text:
 			print(l)
+		print("== Slice new symbols ==")
+		for s in self.slice_symbols_added:
+			print(s)
 
 	def output(self, output_fd):
 		print("Output resulting slice")
@@ -413,6 +431,9 @@ j simpoint_start
 				text_line_end = i
 		for i in range(text_line_begin, text_line_end):
 			out_str = self.slice_text[i] + "\n"
+			output_fd.write(out_str)
+		for s in self.slice_symbols_added:
+			out_str = s + ":\n"
 			output_fd.write(out_str)
 
 def usage():
