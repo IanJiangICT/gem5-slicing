@@ -35,6 +35,10 @@ else
 fi
 OBJDUMP=$GNU_PREFIX-objdump
 $OBJDUMP -D $slice_elf > $slice_elf.S
+if [ ! $? -eq 0 ]; then
+	echo "Error: Failed to objdump $slice_elf"
+	exit 1
+fi
 line_num_entry=`grep -n \<simpoint_entry\>\: $slice_elf.S | cut -d ":" -f 1`
 inst_cnt_init=`tail -n +$line_num_entry $slice_elf.S | grep -n "^$" | head -n 1 | cut -d ":" -f 1`
 inst_cnt_init=$((inst_cnt_init-2))
@@ -64,7 +68,11 @@ if [ "$target_platform" == "spike" ]; then
 
 	log_lines=`wc -l $log_file | cut -d ' ' -f 1`
 	if [ "$log_lines" -lt "$inst_cnt_total" ]; then
-		echo "Error: Not enough running log. Line count $log_lines"
+		echo "Error: Running log not enough. Line count $log_lines, expected $inst_cnt_total"
+		exit 1
+	fi
+	if [ "$log_lines" -gt "$((inst_cnt_total+10))" ]; then
+		echo "Error: Running log too large. Line count $log_lines, expected $inst_cnt_total"
 		exit 1
 	fi
 	pc_last=`tail -n 3 $log_file | head -n 1 | cut -d 'x' -f 2 | cut -b 9-16`
