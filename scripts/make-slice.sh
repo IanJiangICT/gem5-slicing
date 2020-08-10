@@ -58,6 +58,12 @@ fi
 
 APP_CMD=$APP_DIR/$APP
 APP_OPTION=`cat $APP_DIR/cmd`
+CC=$GNU_PREFIX-gcc
+
+which $CC > /dev/null
+if [ $? -eq 0 ]; then
+	echo "Warn: Compiler $CC not found"
+fi
 
 echo "------------------------"
 echo "Gem5     = " $GEM5_BIN
@@ -70,7 +76,7 @@ for i in $(seq 1 $CHECKPOINT_CNT); do
 		continue
 	fi
 	log_file=$APP_DIR/make-slice-$APP-$i.log
-	echo "Generate slice for checkpoint $i"
+	echo "Generate slice [$i]"
 	$GEM5_BIN --outdir=$APP_DIR/m5out \
 			--debug-flags=Exec \
 			$GEM5_DIR/configs/example/se.py \
@@ -83,31 +89,53 @@ for i in $(seq 1 $CHECKPOINT_CNT); do
 			-r $i \
 			> $log_file 2>&1
 	if [ ! $? -eq 0 ]; then
-		echo "Error: Failed to generate slice. Details see $log_file"
+		echo "Generate slice [$i] Failed. Details see $log_file"
 		continue
+	else
+		echo "Generate slice [$i] OK"
 	fi
 
 	echo "Result slice"
 	slice_file=`ls -t $APP_DIR/m5out/cpt.*/simpoint_slice.S | head -n 1`
 	log_file=$APP_DIR/slice-parse-$APP-$i.log
 	$scripts_path/slice-parse.py $slice_file > $log_file
-	ls -l $slice_file*
+	ls -l $slice_file $slice_file.S
 
-	CC=$GNU_PREFIX-gcc
 	which $CC > /dev/null
+	if [ ! $? -eq 0 ]; then
+		continue
+	fi
+	echo "Compile slice [$i]"
+	$CC -c $slice_file.S -o /dev/null
 	if [ $? -eq 0 ]; then
-		echo "Compile slice as checking"
-		$CC -c $slice_file.S -o /dev/null
-		if [ $? -eq 0 ]; then
-			echo "Compile slice as checking OK"
-		else
-			echo "Compile slice as checking Failed"
-		fi
+		echo "Compile slice [$i] OK"
+	else
+		echo "Compile slice [$i] Failed"
+		continue
 	fi
 
+	echo "Build slice [$i]"
+	rm -f $slice_file.S.elf
+	rm -f $slice_file.S.elf.S
 	log_file=$APP_DIR/slice-build-$APP-$i.log
 	$scripts_path/slice-build.sh $slice_file.S > $log_file
-	ls -l $slice_file*elf*
+	if [ -f $slice_file.S.elf ]; then
+		echo "Build slice [$i] OK"
+	else
+		echo "Build slice [$i] Failed"
+		continue
+	fi
+	ls -l $slice_file.S.elf
+
+	echo "Run slice [$i]"
+	log_file=$APP_DIR/slice-run-$APP-$i.log
+	$scripts_path/slice-run.sh $slice_file.S.elf > $log_file
+	if [ $? -eq 0 ]; then
+		echo "Run slice [$i] OK"
+	else
+		echo "Run slice [$i] Failed"
+		continue
+	fi
 done
 
 exit 0
