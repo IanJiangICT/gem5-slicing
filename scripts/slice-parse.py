@@ -14,6 +14,9 @@ class SliceData:
 		self.stack_max_size = 0
 		self.stack_sp_top = 0
 		self.stack_sp_bottom = 0
+		self.ra_list_offset = []
+		self.ra_list_value = []
+		self.ra_list_symbol = []
 		self.vma_list_start = []
 		self.vma_list_end = []
 		self.vma_list_name = []
@@ -30,6 +33,9 @@ class SliceData:
 		print("stack_sp_bottom " + hex(self.stack_sp_bottom))
 		for i in range(0, len(self.stack_data)):
 			print("stack_data " + str(i) + " " + hex(self.stack_data[i]))
+		for i in range(0, len(self.ra_list_offset)):
+			print("ra " + str(i) + " " + str(self.ra_list_offset[i]) + " " \
+					+ hex(self.ra_list_value[i]) + " " + self.ra_list_symbol[i])
 		for i in range(0, len(self.vma_list_name)):
 			print("vma " + str(i) + " " + self.vma_list_name[i] + " " \
 					+ hex(self.vma_list_start[i]) + " " + hex(self.vma_list_end[i]) \
@@ -43,6 +49,7 @@ class SliceParse:
 	FLAG_START_REG_INT= "simpoint_reg_int:"
 	FLAG_START_REG_FLOAT = "simpoint_reg_float:"
 	FLAG_START_STACK_DATA = "simpoint_stack_top:"
+	FLAG_START_RA_LIST = "/* RA list */"
 	FLAG_START_VMA_LIST = "/* VMA list */"
 	FLAG_START_MEM_INIT = "/* Address-Value pairs */"
 	FLAG_START_TEXT = "/* SimPoint Start */"
@@ -91,6 +98,10 @@ class SliceParse:
 				break
 			slice_line = slice_line.strip('\n')
 			line_words = slice_line.split(' ')
+			if (len(line_words) <= 0):
+				break
+			if (line_words[0] == "//"):
+				continue
 			if (len(line_words) < 6):
 				break
 			if (line_words[4] != ".dword"):
@@ -119,6 +130,31 @@ class SliceParse:
 				self.slice_data.stack_sp_top = int(line_words[2], 16)
 			elif (line_words[1] == "SIMPOINT_STACK_SP_BOTTOM"):
 				self.slice_data.stack_sp_bottom = int(line_words[2], 16)
+
+	def append_new_ra(self, offset, value, symbol):
+		self.slice_data.ra_list_offset.append(offset)
+		self.slice_data.ra_list_value.append(value)
+		self.slice_data.ra_list_symbol.append(symbol)
+
+	def parse_ra_list(self):
+		slice_fd = self.slice_fd
+		while (True):
+			slice_line = slice_fd.readline()
+			if (not slice_line):
+				break
+			slice_line = slice_line.strip('\n')
+			line_words = slice_line.split(' ')
+			if (len(line_words) != 3):
+				break
+			sub_words = line_words[1].split('_')
+			if (len(sub_words) != 3):
+				break
+			if (len(line_words[2]) < 1): # Min. symbol is "?"
+				break
+			ra_offset = int(sub_words[1])
+			ra_value = int(sub_words[2], 16)
+			ra_symbol = line_words[2]
+			self.append_new_ra(ra_offset, ra_value, ra_symbol)
 
 	def parse_vma_list(self):
 		slice_fd = self.slice_fd
@@ -220,6 +256,10 @@ class SliceParse:
 			elif (slice_line.find(self.FLAG_START_STACK_DATA) == 0):
 				print("Dectecting stack...")
 				self.parse_stack()
+				continue
+			elif (slice_line.find(self.FLAG_START_RA_LIST) == 0):
+				print("Dectecting RA list...")
+				self.parse_ra_list()
 				continue
 			elif (slice_line.find(self.FLAG_START_VMA_LIST) == 0):
 				print("Dectecting VMA list...")
@@ -370,11 +410,16 @@ simpoint_entry:
 				out_str = "li t0, " + hex(self.slice_data_update.mem_init_addr[i]) + " + FREE_MEM_BASE\n"
 			else:
 				out_str = "li t0, " + hex(self.slice_data.mem_init_addr[i]) + "\n"
-			if (self.slice_data_update.mem_init_data[i] != self.slice_data.mem_init_data[i]):
+			if (self.slice_data.mem_init_data[i] in self.slice_data.ra_list_value):
+				va_index = self.slice_data.ra_list_value.index(self.slice_data.mem_init_data[i])
+				va_symbol = self.slice_data.ra_list_symbol[va_index]
+				out_str += "la t1, " + va_symbol + "\n"
+			elif (self.slice_data_update.mem_init_data[i] != self.slice_data.mem_init_data[i]):
 				out_str += "li t1, " + hex(self.slice_data_update.mem_init_data[i]) + " + FREE_MEM_BASE\n"
 			else:
 				out_str += "li t1, " + hex(self.slice_data.mem_init_data[i]) + "\n"
 			out_str += "sd t1, 0(t0)\n"
+			#print("Debug output mem_init ", i, selfout_str)
 			output_fd.write(out_str)
 
 		out_str = \
@@ -385,7 +430,12 @@ simpoint_entry:
 		out_str = "li t0, " + hex(self.slice_data_update.stack_sp_top) + " + FREE_MEM_BASE\n"
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.stack_data)):
-			if (self.slice_data_update.stack_data[i] != self.slice_data.stack_data[i]):
+			stack_offset = i * 8
+			if (stack_offset in self.slice_data.ra_list_offset):
+				va_index = self.slice_data.ra_list_offset.index(stack_offset)
+				va_symbol = self.slice_data.ra_list_symbol[va_index]
+				out_str = "la t1, " + va_symbol + "\n"
+			elif (self.slice_data_update.stack_data[i] != self.slice_data.stack_data[i]):
 				out_str = "li t1, " + hex(self.slice_data_update.stack_data[i]) + " + FREE_MEM_BASE\n"
 			else:
 				out_str = "li t1, " + hex(self.slice_data.stack_data[i]) + "\n"
@@ -406,7 +456,10 @@ simpoint_entry:
 		for i in range(0, len(self.slice_data_update.reg_int)):
 			if (i == 0): # Register x0 (i.e. register zero) is skipped
 				continue
-			if (self.slice_data_update.reg_int[i] != self.slice_data.reg_int[i]):
+			if (i == 1 and len(self.slice_data.ra_list_symbol) > 0): # Register x1 (i.e. ra)
+				va_symbol = self.slice_data.ra_list_symbol[0]
+				out_str = "la x1, " + va_symbol + "\n"
+			elif (self.slice_data_update.reg_int[i] != self.slice_data.reg_int[i]):
 				out_str = "li x" + str(i) + ", " + hex(self.slice_data_update.reg_int[i]) + " + FREE_MEM_BASE\n"
 			else:
 				out_str = "li x" + str(i) + ", " + hex(self.slice_data.reg_int[i]) + "\n"
