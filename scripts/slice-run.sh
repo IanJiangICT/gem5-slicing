@@ -52,9 +52,14 @@ if [ "$target_platform" == "spike" ]; then
 
 	inst_cnt_boot=6
 	inst_cnt_total=$((inst_cnt_boot+inst_cnt_init+inst_cnt_slice))
-	mr_list=0x92000:0x28000,0x40000000:0x80000000
+	# rom:        0x1000 -    0x2000 size     0x1000
+	# ram:        0x2000 - 0x2000000 size  0x1ffe000
+	# clint:   0x2000000 - 0x20c0000 size    0xc0000
+	# ram:     0x20c0000 - 0x4000000 size 0x1f400000
+	# ram:     0x4000000 - 0xc000000 size 0x80000000
+	mr_list=0x2000:0x1ffe000,0x20c0000:0x1f40000,0x40000000:0x80000000
 	other_options=--log-commits
-	other_options=-l
+	#other_options=-l
 	log_file=$slice_elf-$target_platform.log
 
 	echo "------------------------"
