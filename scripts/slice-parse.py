@@ -17,6 +17,8 @@ class SliceData:
 		self.ra_list_offset = []
 		self.ra_list_value = []
 		self.ra_list_symbol = []
+		self.bt_list_value = []
+		self.bt_list_symbol = []
 		self.vma_list_start = []
 		self.vma_list_end = []
 		self.vma_list_name = []
@@ -36,6 +38,9 @@ class SliceData:
 		for i in range(0, len(self.ra_list_offset)):
 			print("ra " + str(i) + " " + str(self.ra_list_offset[i]) + " " \
 					+ hex(self.ra_list_value[i]) + " " + self.ra_list_symbol[i])
+		for i in range(0, len(self.bt_list_value)):
+			print("bt " + str(i) + " " \
+					+ hex(self.bt_list_value[i]) + " " + self.bt_list_symbol[i])
 		for i in range(0, len(self.vma_list_name)):
 			print("vma " + str(i) + " " + self.vma_list_name[i] + " " \
 					+ hex(self.vma_list_start[i]) + " " + hex(self.vma_list_end[i]) \
@@ -50,6 +55,7 @@ class SliceParse:
 	FLAG_START_REG_FLOAT = "simpoint_reg_float:"
 	FLAG_START_STACK_DATA = "simpoint_stack_top:"
 	FLAG_START_RA_LIST = "/* RA list */"
+	FLAG_START_BT_LIST = "/* Branch targets list */"
 	FLAG_START_VMA_LIST = "/* VMA list */"
 	FLAG_START_MEM_INIT = "/* Address-Value pairs */"
 	FLAG_START_TEXT = "/* SimPoint Start */"
@@ -156,6 +162,29 @@ class SliceParse:
 			ra_symbol = line_words[2]
 			self.append_new_ra(ra_offset, ra_value, ra_symbol)
 
+	def append_new_bt(self, value, symbol):
+		self.slice_data.bt_list_value.append(value)
+		self.slice_data.bt_list_symbol.append(symbol)
+
+	def parse_bt_list(self):
+		slice_fd = self.slice_fd
+		while (True):
+			slice_line = slice_fd.readline()
+			if (not slice_line):
+				break
+			slice_line = slice_line.strip('\n')
+			line_words = slice_line.split(' ')
+			if (len(line_words) != 3):
+				break
+			sub_words = line_words[1].split('_')
+			if (len(sub_words) != 2):
+				break
+			if (len(line_words[2]) < 1): # Min. symbol is "?"
+				break
+			bt_value = int(sub_words[1], 16)
+			bt_symbol = line_words[2]
+			self.append_new_bt(bt_value, bt_symbol)
+
 	def parse_vma_list(self):
 		slice_fd = self.slice_fd
 		while (True):
@@ -260,6 +289,10 @@ class SliceParse:
 			elif (slice_line.find(self.FLAG_START_RA_LIST) == 0):
 				print("Dectecting RA list...")
 				self.parse_ra_list()
+				continue
+			elif (slice_line.find(self.FLAG_START_BT_LIST) == 0):
+				print("Dectecting BT list...")
+				self.parse_bt_list()
 				continue
 			elif (slice_line.find(self.FLAG_START_VMA_LIST) == 0):
 				print("Dectecting VMA list...")
