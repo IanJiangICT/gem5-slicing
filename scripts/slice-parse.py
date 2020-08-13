@@ -476,9 +476,11 @@ simpoint_entry:
 /* Restore stack */
 """
 		output_fd.write(out_str)
-		out_str = "li t0, " + hex(self.slice_data_update.stack_sp_top) + " + FREE_MEM_BASE\n"
-		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.stack_data)):
+			byte_offset = i * 8
+			if (byte_offset % 1024 == 0): # To keep a valid offset in store instruction
+				out_str = "li t0, " + hex(self.slice_data_update.stack_sp_top) + " + FREE_MEM_BASE + " + hex(byte_offset) + "\n"
+				output_fd.write(out_str)
 			bt_symbol = self.get_bt_symbol(self.slice_data.stack_data[i])
 			stack_offset = i * 8
 			comment = "// " + hex(stack_offset) + " : " + hex(self.slice_data.stack_data[i])
@@ -495,7 +497,7 @@ simpoint_entry:
 				out_str = "la t1, " + bt_symbol + "\n"
 			else:
 				out_str = "li t1, " + hex(self.slice_data.stack_data[i]) + "\n"
-			out_str += "sd t1, " + str(i * 8) + "(t0)\n"
+			out_str += "sd t1, " + str(byte_offset % 1024) + "(t0)\n"
 			output_fd.write(comment + "\n")
 			output_fd.write(out_str)
 
