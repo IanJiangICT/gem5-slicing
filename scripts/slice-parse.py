@@ -407,19 +407,24 @@ simpoint_entry:
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.mem_init_addr)):
 			if (self.slice_data_update.mem_init_addr[i] != self.slice_data.mem_init_addr[i]):
+				comment = "// " + str(i) + " " + hex(self.slice_data.mem_init_addr[i]) + " -> " + hex(self.slice_data_update.mem_init_addr[i])
 				out_str = "li t0, " + hex(self.slice_data_update.mem_init_addr[i]) + " + FREE_MEM_BASE\n"
 			else:
+				comment = "// " + str(i) + " " + hex(self.slice_data.mem_init_addr[i])
 				out_str = "li t0, " + hex(self.slice_data.mem_init_addr[i]) + "\n"
 			if (self.slice_data.mem_init_data[i] in self.slice_data.ra_list_value):
 				va_index = self.slice_data.ra_list_value.index(self.slice_data.mem_init_data[i])
 				va_symbol = self.slice_data.ra_list_symbol[va_index]
+				comment += " : " + va_symbol
 				out_str += "la t1, " + va_symbol + "\n"
 			elif (self.slice_data_update.mem_init_data[i] != self.slice_data.mem_init_data[i]):
+				comment += " : " + hex(self.slice_data.mem_init_data[i]) + " -> " + hex(self.slice_data_update.mem_init_data[i])
 				out_str += "li t1, " + hex(self.slice_data_update.mem_init_data[i]) + " + FREE_MEM_BASE\n"
 			else:
+				comment += " : " + hex(self.slice_data.mem_init_data[i])
 				out_str += "li t1, " + hex(self.slice_data.mem_init_data[i]) + "\n"
 			out_str += "sd t1, 0(t0)\n"
-			#print("Debug output mem_init ", i, selfout_str)
+			output_fd.write(comment + "\n")
 			output_fd.write(out_str)
 
 		out_str = \
@@ -431,15 +436,19 @@ simpoint_entry:
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.stack_data)):
 			stack_offset = i * 8
+			comment = "// " + hex(stack_offset) + " : " + hex(self.slice_data.stack_data[i])
 			if (stack_offset in self.slice_data.ra_list_offset):
 				va_index = self.slice_data.ra_list_offset.index(stack_offset)
 				va_symbol = self.slice_data.ra_list_symbol[va_index]
+				comment += " -> " + va_symbol
 				out_str = "la t1, " + va_symbol + "\n"
 			elif (self.slice_data_update.stack_data[i] != self.slice_data.stack_data[i]):
+				comment += " -> " + hex(self.slice_data_update.stack_data[i])
 				out_str = "li t1, " + hex(self.slice_data_update.stack_data[i]) + " + FREE_MEM_BASE\n"
 			else:
 				out_str = "li t1, " + hex(self.slice_data.stack_data[i]) + "\n"
 			out_str += "sd t1, " + str(i * 8) + "(t0)\n"
+			output_fd.write(comment + "\n")
 			output_fd.write(out_str)
 
 		out_str = \
