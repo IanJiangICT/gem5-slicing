@@ -389,6 +389,13 @@ class SliceParse:
 		for s in self.slice_symbols_added:
 			print(s)
 
+	def get_bt_symbol(self, addr):
+		symbol = str("")
+		if (addr in self.slice_data.bt_list_value):
+			i = self.slice_data.bt_list_value.index(addr)
+			symbol = self.slice_data.bt_list_symbol[i]
+		return symbol
+
 	def output(self, output_fd):
 		print("Output resulting slice")
 
@@ -439,6 +446,7 @@ simpoint_entry:
 """
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.mem_init_addr)):
+			bt_symbol = self.get_bt_symbol(self.slice_data.mem_init_data[i])
 			if (self.slice_data_update.mem_init_addr[i] != self.slice_data.mem_init_addr[i]):
 				comment = "// " + str(i) + " " + hex(self.slice_data.mem_init_addr[i]) + " -> " + hex(self.slice_data_update.mem_init_addr[i])
 				out_str = "li t0, " + hex(self.slice_data_update.mem_init_addr[i]) + " + FREE_MEM_BASE\n"
@@ -453,6 +461,9 @@ simpoint_entry:
 			elif (self.slice_data_update.mem_init_data[i] != self.slice_data.mem_init_data[i]):
 				comment += " : " + hex(self.slice_data.mem_init_data[i]) + " -> " + hex(self.slice_data_update.mem_init_data[i])
 				out_str += "li t1, " + hex(self.slice_data_update.mem_init_data[i]) + " + FREE_MEM_BASE\n"
+			elif (len(bt_symbol) > 0):
+				comment += " : " + hex(self.slice_data.mem_init_data[i]) + " -> " + bt_symbol
+				out_str += "la t1, " + bt_symbol + "\n"
 			else:
 				comment += " : " + hex(self.slice_data.mem_init_data[i])
 				out_str += "li t1, " + hex(self.slice_data.mem_init_data[i]) + "\n"
@@ -468,6 +479,7 @@ simpoint_entry:
 		out_str = "li t0, " + hex(self.slice_data_update.stack_sp_top) + " + FREE_MEM_BASE\n"
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.stack_data)):
+			bt_symbol = self.get_bt_symbol(self.slice_data.stack_data[i])
 			stack_offset = i * 8
 			comment = "// " + hex(stack_offset) + " : " + hex(self.slice_data.stack_data[i])
 			if (stack_offset in self.slice_data.ra_list_offset):
@@ -478,6 +490,9 @@ simpoint_entry:
 			elif (self.slice_data_update.stack_data[i] != self.slice_data.stack_data[i]):
 				comment += " -> " + hex(self.slice_data_update.stack_data[i])
 				out_str = "li t1, " + hex(self.slice_data_update.stack_data[i]) + " + FREE_MEM_BASE\n"
+			elif (len(bt_symbol) > 0):
+				comment += " : " + hex(self.slice_data.stack_data[i]) + " -> " + bt_symbol
+				out_str = "la t1, " + bt_symbol + "\n"
 			else:
 				out_str = "li t1, " + hex(self.slice_data.stack_data[i]) + "\n"
 			out_str += "sd t1, " + str(i * 8) + "(t0)\n"
@@ -496,6 +511,7 @@ simpoint_entry:
 """
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.reg_int)):
+			bt_symbol = self.get_bt_symbol(self.slice_data.reg_int[i])
 			if (i == 0): # Register x0 (i.e. register zero) is skipped
 				continue
 			if (i == 1 and len(self.slice_data.ra_list_symbol) > 0): # Register x1 (i.e. ra)
@@ -503,6 +519,8 @@ simpoint_entry:
 				out_str = "la x1, " + va_symbol + "\n"
 			elif (self.slice_data_update.reg_int[i] != self.slice_data.reg_int[i]):
 				out_str = "li x" + str(i) + ", " + hex(self.slice_data_update.reg_int[i]) + " + FREE_MEM_BASE\n"
+			elif (len(bt_symbol) > 0):
+				out_str = "la x1, " + bt_symbol + "\n"
 			else:
 				out_str = "li x" + str(i) + ", " + hex(self.slice_data.reg_int[i]) + "\n"
 			output_fd.write(out_str)
