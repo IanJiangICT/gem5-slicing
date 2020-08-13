@@ -447,6 +447,7 @@ simpoint_entry:
 		output_fd.write(out_str)
 		for i in range(0, len(self.slice_data_update.mem_init_addr)):
 			bt_symbol = self.get_bt_symbol(self.slice_data.mem_init_data[i])
+			bt_32h_symbol = self.get_bt_symbol(self.slice_data.mem_init_data[i] >> 32)
 			if (self.slice_data_update.mem_init_addr[i] != self.slice_data.mem_init_addr[i]):
 				comment = "// " + str(i) + " " + hex(self.slice_data.mem_init_addr[i]) + " -> " + hex(self.slice_data_update.mem_init_addr[i])
 				out_str = "li t0, " + hex(self.slice_data_update.mem_init_addr[i]) + " + FREE_MEM_BASE\n"
@@ -464,6 +465,11 @@ simpoint_entry:
 			elif (len(bt_symbol) > 0):
 				comment += " : " + hex(self.slice_data.mem_init_data[i]) + " -> " + bt_symbol
 				out_str += "la t1, " + bt_symbol + "\n"
+			elif (len(bt_32h_symbol) > 0):
+				comment += " : " + hex(self.slice_data.mem_init_data[i]) + "[63:32] -> " + bt_32h_symbol
+				out_str += "la t1, " + bt_32h_symbol + "\n"
+				out_str += "slli t1, t1, 32\n"
+				out_str += "addi t1, t1, " + hex(self.slice_data.mem_init_data[i] & 0xFFFFFFFF)+ "\n"
 			else:
 				comment += " : " + hex(self.slice_data.mem_init_data[i])
 				out_str += "li t1, " + hex(self.slice_data.mem_init_data[i]) + "\n"
