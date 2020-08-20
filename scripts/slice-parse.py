@@ -525,6 +525,13 @@ simpoint_entry:
 /* Restore register - float */
 """
 		output_fd.write(out_str)
+		for i in range(0, len(self.slice_data_update.reg_float)):
+			bt_symbol = self.get_bt_symbol(self.slice_data.reg_float[i])
+			out_str = "li t0, " + hex(self.slice_data.reg_float[i]) + "\n"
+			out_str += "fmv.d.x f" + str(i) + ", t0\n"
+			output_fd.write(out_str)
+		out_str = "\n"
+		output_fd.write(out_str)
 
 		out_str = \
 """
