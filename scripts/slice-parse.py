@@ -92,7 +92,20 @@ class SliceParse:
 		self.slice_data.reg_int = data_list
 
 	def parse_reg_float(self):
-		self.slice_data.reg_float = []
+		slice_fd = self.slice_fd
+		data_list = []
+		while (True):
+			slice_line = slice_fd.readline()
+			if (not slice_line):
+				break
+			slice_line = slice_line.strip('\n')
+			line_words = slice_line.split(' ')
+			if (len(line_words) < 6):
+				break
+			if (line_words[4] != ".dword"):
+				break
+			data_list.append(int(line_words[5], 16))
+		self.slice_data.reg_float = data_list
 	
 	def parse_stack(self):
 		slice_fd = self.slice_fd
