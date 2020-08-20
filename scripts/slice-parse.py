@@ -72,6 +72,11 @@ class SliceParse:
 	VMA_ALIGN = 0x1000
 	VMA_MASK_BASE = 0xFFFFFFFFFFFFFFFF ^ (VMA_ALIGN - 1)
 
+	CSR_LIST = []
+	CSR_LIST.append("mstatus")
+	#CSR_LIST.append("fflags")
+	#CSR_LIST.append("frm")
+
 	def __init__(self, slice_fd):
 		self.slice_fd = slice_fd
 		self.slice_data = SliceData()
@@ -551,6 +556,23 @@ simpoint_entry:
 			out_str += "sd t1, " + str(byte_offset % 1024) + "(t0)\n"
 			output_fd.write(comment + "\n")
 			output_fd.write(out_str)
+
+		out_str = \
+"""
+/* Restore register - miscellaneous */
+"""
+		output_fd.write(out_str)
+		for csr in self.CSR_LIST:
+			if (not csr in self.slice_data.reg_misc_name):
+				print("Warn: No CSR " + csr + " in slice data")
+				continue
+			misc_index = self.slice_data.reg_misc_name.index(csr)
+			value = self.slice_data.reg_misc_value[misc_index]
+			out_str = "li t0, " + hex(value) + "\n"
+			out_str += "csrw " + csr + ", t0\n"
+			output_fd.write(out_str)
+		out_str = "\n"
+		output_fd.write(out_str)
 
 		out_str = \
 """
