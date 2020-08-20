@@ -8,7 +8,10 @@ import copy
 class SliceData:
 	def __init__(self):
 		self.reg_int = []
-		self.reg_float= []
+		self.reg_float = []
+		self.reg_misc_offset = []
+		self.reg_misc_name = []
+		self.reg_misc_value = []
 		self.stack_data = []
 		self.stack_base = 0
 		self.stack_max_size = 0
@@ -30,6 +33,8 @@ class SliceData:
 			print("reg_int " + str(i) + " " + hex(self.reg_int[i]))
 		for i in range(0, len(self.reg_float)):
 			print("reg_float " + str(i) + " " + hex(self.reg_float[i]))
+		for i in range(0, len(self.reg_misc_offset)):
+			print("reg_misc " + str(i) + " " + hex(self.reg_misc_offset[i]) + " " + self.reg_misc_name[i] + " " + hex(self.reg_misc_value[i]))
 		print("stack_base " + hex(self.stack_base))
 		print("stack_sp_top " + hex(self.stack_sp_top))
 		print("stack_sp_bottom " + hex(self.stack_sp_bottom))
@@ -53,6 +58,7 @@ class SliceParse:
 
 	FLAG_START_REG_INT= "simpoint_reg_int:"
 	FLAG_START_REG_FLOAT = "simpoint_reg_float:"
+	FLAG_START_REG_MISC = "simpoint_reg_misc:"
 	FLAG_START_STACK_DATA = "simpoint_stack_top:"
 	FLAG_START_RA_LIST = "/* RA list */"
 	FLAG_START_BT_LIST = "/* Branch targets list */"
@@ -107,6 +113,28 @@ class SliceParse:
 			data_list.append(int(line_words[5], 16))
 		self.slice_data.reg_float = data_list
 	
+	def parse_reg_misc(self):
+		slice_fd = self.slice_fd
+		while (True):
+			offset = 0
+			name = ""
+			value = 0
+			slice_line = slice_fd.readline()
+			if (not slice_line):
+				break
+			slice_line = slice_line.strip('\n')
+			line_words = slice_line.split(' ')
+			if (len(line_words) < 9):
+				break
+			if (line_words[4] != ".dword"):
+				break
+			value = int(line_words[5], 16)
+			offset = int(line_words[7], 16)
+			name = line_words[8]
+			self.slice_data.reg_misc_offset.append(offset)
+			self.slice_data.reg_misc_value.append(value)
+			self.slice_data.reg_misc_name.append(name)
+
 	def parse_stack(self):
 		slice_fd = self.slice_fd
 		# Stack data is at the begining
@@ -294,6 +322,10 @@ class SliceParse:
 			elif (slice_line.find(self.FLAG_START_REG_FLOAT) == 0):
 				print("Dectecting register float...")
 				self.parse_reg_float()
+				continue
+			elif (slice_line.find(self.FLAG_START_REG_MISC) == 0):
+				print("Dectecting register miscellaneous...")
+				self.parse_reg_misc()
 				continue
 			elif (slice_line.find(self.FLAG_START_STACK_DATA) == 0):
 				print("Dectecting stack...")
