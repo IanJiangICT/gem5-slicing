@@ -404,14 +404,20 @@ class SliceParse:
 		# Note: Use 0 start address of free memroy here in internal recording, 
 		# while add " + FREE_MEM_BASE" as an offset in ouputing slice.
 		mem_free_start = 0
+		print("== Relocate some VMAs to logical address 0 ==")
 		for i in vma_relocate_list:
 			if (self.slice_data.vma_list_name[i] == "stack"):
+				print("Note: Size of stack VMA extended to stack_max_size = " + hex(self.slice_data.stack_max_size))
 				vma_size = self.slice_data.stack_max_size
+				self.slice_data.vma_list_start[i] = self.slice_data.vma_list_end[i] - vma_size
 			else:
 				vma_size = self.slice_data.vma_list_end[i] - self.slice_data.vma_list_start[i]
 			self.slice_data_update.vma_list_start[i] = mem_free_start
 			mem_free_start += vma_size
 			self.slice_data_update.vma_list_end[i] = mem_free_start
+			print("VMA " + str(i) + " " + self.slice_data.vma_list_name[i] \
+					+ " " + hex(self.slice_data.vma_list_start[i]) + "-" + hex(self.slice_data.vma_list_end[i]) \
+					+ " " + hex(self.slice_data_update.vma_list_start[i]) + "-" + hex(self.slice_data_update.vma_list_end[i]))
 
 		# Update stack and memory information
 		for i in range(0, len(self.slice_data_update.stack_data)):
