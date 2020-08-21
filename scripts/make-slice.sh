@@ -61,8 +61,9 @@ APP_OPTION=`cat $APP_DIR/cmd`
 CC=$GNU_PREFIX-gcc
 
 which $CC > /dev/null
-if [ $? -eq 0 ]; then
+if [ ! $? -eq 0 ]; then
 	echo "Warn: Compiler $CC not found"
+	exit 1
 fi
 
 echo "------------------------"
