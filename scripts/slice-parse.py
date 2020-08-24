@@ -364,6 +364,7 @@ class SliceParse:
 			relocate_offset = self.slice_data.vma_list_start[i] - self.slice_data_update.vma_list_start[i]
 			if (relocate_offset != 0):
 				new_addr -= relocate_offset
+				print("Info: Relocate addr " + hex(addr) + " " + hex(new_addr))
 				break
 		return new_addr
 
