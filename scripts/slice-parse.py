@@ -20,6 +20,7 @@ class SliceData:
 		self.ra_list_offset = []
 		self.ra_list_value = []
 		self.ra_list_symbol = []
+		self.bt_list_pc = []
 		self.bt_list_value = []
 		self.bt_list_symbol = []
 		self.vma_list_start = []
@@ -45,7 +46,7 @@ class SliceData:
 					+ hex(self.ra_list_value[i]) + " " + self.ra_list_symbol[i])
 		for i in range(0, len(self.bt_list_value)):
 			print("bt " + str(i) + " " \
-					+ hex(self.bt_list_value[i]) + " " + self.bt_list_symbol[i])
+					+ hex(self.bt_list_pc[i]) + " " + hex(self.bt_list_value[i]) + " " + self.bt_list_symbol[i])
 		for i in range(0, len(self.vma_list_name)):
 			print("vma " + str(i) + " " + self.vma_list_name[i] + " " \
 					+ hex(self.vma_list_start[i]) + " " + hex(self.vma_list_end[i]) \
@@ -208,7 +209,8 @@ class SliceParse:
 			ra_symbol = line_words[2]
 			self.append_new_ra(ra_offset, ra_value, ra_symbol)
 
-	def append_new_bt(self, value, symbol):
+	def append_new_bt(self, pc, value, symbol):
+		self.slice_data.bt_list_pc.append(pc)
 		self.slice_data.bt_list_value.append(value)
 		self.slice_data.bt_list_symbol.append(symbol)
 
@@ -223,13 +225,14 @@ class SliceParse:
 			if (len(line_words) != 3):
 				break
 			sub_words = line_words[1].split('_')
-			if (len(sub_words) != 2):
+			if (len(sub_words) != 3):
 				break
 			if (len(line_words[2]) < 1): # Min. symbol is "?"
 				break
-			bt_value = int(sub_words[1], 16)
+			bt_pc = int(sub_words[1], 16)
+			bt_value = int(sub_words[2], 16)
 			bt_symbol = line_words[2]
-			self.append_new_bt(bt_value, bt_symbol)
+			self.append_new_bt(bt_pc, bt_value, bt_symbol)
 
 	def parse_vma_list(self):
 		slice_fd = self.slice_fd
