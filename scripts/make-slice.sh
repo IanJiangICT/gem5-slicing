@@ -79,7 +79,7 @@ for i in $(seq 1 $CHECKPOINT_CNT); do
 	log_file=$APP_DIR/make-slice-$APP-$i.log
 	echo "Generate slice [$i]"
 	$GEM5_BIN --outdir=$APP_DIR/m5out \
-			--debug-flags=Exec \
+			--debug-flags=Exec,IntRegs \
 			$GEM5_DIR/configs/example/se.py \
 			-c $APP_CMD -o "$APP_OPTION" \
 			--cpu-type=NonCachingSimpleCPU \
