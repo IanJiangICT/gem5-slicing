@@ -635,6 +635,36 @@ j simpoint_start
 			if (self.FLAG_STOP_TEXT == self.slice_text[i]):
 				text_line_end = i
 		for i in range(text_line_begin, text_line_end):
+			if (self.slice_text[i].startswith('jalr')):
+				# Example jalr:
+				#   jalr ra, -168(ra) // 0x1d0fc
+				#   BT_0x1d0fc_0x12d050 __realloc
+				#
+				# Parse:
+				#   inst_pc = 0x1d0fc
+				#   inst_offset = -168
+				#   inst_rs1 = ra
+				#   bt_addr = 0x12d050
+				#   bt_symbol = "__realloc"
+				#
+				# Result:
+				#   la ra, __realloc - (-168) // 0x12df8
+				#   jalr ra, -168(ra) // 0x1d0fc
+				line_words = self.slice_text[i].split('/')
+				inst_pc = int(line_words[2], 16)
+				line_words = self.slice_text[i].split('(')
+				inst_offset = int(line_words[0].split(' ')[2], 10)
+				inst_rs1 = line_words[1].split(')')[0]
+				bt_symbol = "null-symbol"
+				bt_addr = 0
+				if (inst_pc in self.slice_data.bt_list_pc):
+					bt_i = self.slice_data.bt_list_pc.index(inst_pc)
+					bt_symbol = self.slice_data.bt_list_symbol[bt_i]
+					bt_addr = self.slice_data.bt_list_value[bt_i]
+					out_str = "la " + inst_rs1 + ", " + bt_symbol + "- (" + str(inst_offset) + ") // " + hex(bt_addr-inst_offset) + "\n"
+					output_fd.write(out_str)
+				else:
+					print("Error: No branch target found for PC = " + hex(inst_pc))
 			out_str = self.slice_text[i] + "\n"
 			output_fd.write(out_str)
 		for s in self.slice_symbols_added:
