@@ -307,7 +307,7 @@ class SliceParse:
 			if (slice_line[0] == 'j' or slice_line[0] == 'b'):
 				line_words = slice_line.split(',')
 				if (len(line_words) >= 2 and (not slice_line.startswith('jalr'))):
-					self.slice_symbols_expected.add(line_words[-1].strip())
+					self.slice_symbols_expected.add(line_words[-1].split('/')[0].strip())
 		self.slice_text.append(output_line)
 
 	def add_symbol(self):
